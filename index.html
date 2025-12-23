@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DealFlow AI - RAG-Powered M&A Research & Pitchbook Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a24;
+            --border-color: #2a2a3a;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --accent-1: #3b82f6;
+            --accent-2: #1d4ed8;
+            --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --info: #06b6d4;
+            --gold: #fbbf24;
+        }
+
+        body {
+            font-family: 'IBM Plex Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .bg-effects {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .grid-bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        .gradient-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+        }
+
+        .orb-1 {
+            width: 400px;
+            height: 400px;
+            background: var(--accent-1);
+            top: -100px;
+            right: -100px;
+        }
+
+        .orb-2 {
+            width: 300px;
+            height: 300px;
+            background: #8b5cf6;
+            bottom: -50px;
+            left: -50px;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--accent-gradient);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .logo-text {
+            font-size: 1.75rem;
+            font-weight: 700;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: var(--accent-1);
+            margin-top: 1rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-family: inherit;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.3s ease;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab.active {
+            color: var(--accent-1);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-1);
+        }
+
+        .search-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            background: var(--accent-gradient);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-family: inherit;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-card);
+            box-shadow: none;
+        }
+
+        .company-card {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .company-card:hover {
+            border-color: var(--accent-1);
+        }
+
+        .company-card.selected {
+            border-color: var(--accent-1);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .company-logo {
+            width: 60px;
+            height: 60px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .company-info {
+            flex: 1;
+        }
+
+        .company-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .company-sector {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .company-metrics {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .metric-small {
+            font-size: 0.75rem;
+        }
+
+        .metric-small span {
+            color: var(--text-secondary);
+        }
+
+        .metric-small strong {
+            color: var(--accent-1);
+        }
+
+        .analysis-section {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .analysis-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent-1);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .analysis-content {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .citation {
+            display: inline-block;
+            padding: 0.1rem 0.4rem;
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--accent-1);
+            border-radius: 4px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            margin-left: 0.25rem;
+        }
+
+        .citation:hover {
+            background: rgba(59, 130, 246, 0.3);
+        }
+
+        .financial-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .financial-table th {
+            text-align: left;
+            padding: 0.75rem;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-weight: 500;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .financial-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .financial-table tr:hover {
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .positive {
+            color: var(--success);
+        }
+
+        .negative {
+            color: var(--error);
+        }
+
+        .comps-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        .comps-table th {
+            text-align: right;
+            padding: 0.5rem;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .comps-table th:first-child {
+            text-align: left;
+        }
+
+        .comps-table td {
+            text-align: right;
+            padding: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .comps-table td:first-child {
+            text-align: left;
+            font-weight: 500;
+        }
+
+        .comps-table tr.highlight {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .risk-flag {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid var(--warning);
+        }
+
+        .risk-flag.critical {
+            border-left-color: var(--error);
+        }
+
+        .risk-flag.info {
+            border-left-color: var(--info);
+        }
+
+        .risk-icon {
+            font-size: 1.25rem;
+        }
+
+        .risk-text {
+            flex: 1;
+            font-size: 0.85rem;
+        }
+
+        .pitchbook-preview {
+            background: #fff;
+            border-radius: 8px;
+            padding: 1.5rem;
+            color: #1a1a2e;
+        }
+
+        .slide-header {
+            border-bottom: 3px solid var(--accent-1);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .slide-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1a1a2e;
+        }
+
+        .slide-subtitle {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .metric-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .json-output {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.75rem;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .json-key {
+            color: var(--accent-1);
+        }
+
+        .json-string {
+            color: var(--success);
+        }
+
+        .json-number {
+            color: var(--warning);
+        }
+
+        .json-boolean {
+            color: var(--info);
+        }
+
+        .processing-animation {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--accent-1);
+            font-size: 0.9rem;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--accent-1);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .agent-step {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            opacity: 0.5;
+            transition: all 0.3s ease;
+        }
+
+        .agent-step.active {
+            opacity: 1;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .agent-step.complete {
+            opacity: 1;
+        }
+
+        .step-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .step-icon.complete {
+            background: var(--success);
+            color: white;
+        }
+
+        .step-text {
+            flex: 1;
+            font-size: 0.85rem;
+        }
+
+        .step-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .source-card {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .source-icon {
+            font-size: 1.5rem;
+        }
+
+        .source-info {
+            flex: 1;
+        }
+
+        .source-title {
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .source-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .architecture-diagram {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .arch-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .arch-box {
+            padding: 1rem 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            min-width: 140px;
+        }
+
+        .arch-box.highlight {
+            border-color: var(--accent-1);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+        }
+
+        .arch-arrow {
+            font-size: 1.5rem;
+            color: var(--accent-1);
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2, .grid-3, .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-effects">
+        <div class="grid-bg"></div>
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">📊</div>
+                <span class="logo-text">DealFlow AI</span>
+            </div>
+            <p class="subtitle">RAG-Powered M&A Research & Pitchbook Assistant — AI Analyst for Investment Banking</p>
+            <span class="badge">Built for BNP Paribas CIB & MARGO Capital Markets</span>
+        </header>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="demo">Deal Analysis</button>
+            <button class="tab" data-tab="comps">Comparable Analysis</button>
+            <button class="tab" data-tab="pitchbook">Pitchbook Generator</button>
+            <button class="tab" data-tab="sources">RAG Sources</button>
+            <button class="tab" data-tab="architecture">Architecture</button>
+        </div>
+
+        <!-- Demo Tab -->
+        <div id="demo" class="tab-content active">
+            <div class="search-box">
+                <input type="text" class="search-input" id="companySearch" placeholder="Enter company name or ticker (e.g., LVMH, TotalEnergies, BNP)..." value="LVMH">
+                <button class="btn" onclick="analyzeCompany()">🔍 Analyze</button>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">🏢 Target Company</span>
+                    </div>
+                    <div class="company-card selected" id="targetCompany">
+                        <div class="company-logo">LV</div>
+                        <div class="company-info">
+                            <div class="company-name">LVMH Moët Hennessy Louis Vuitton</div>
+                            <div class="company-sector">Luxury Goods | CAC 40</div>
+                            <div class="company-metrics">
+                                <div class="metric-small"><span>Market Cap:</span> <strong>€298.4B</strong></div>
+                                <div class="metric-small"><span>Revenue:</span> <strong>€86.2B</strong></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="agent-step" id="step1">
+                        <div class="step-icon">1</div>
+                        <div class="step-text">Research Agent: Gathering company data...</div>
+                        <div class="step-time"></div>
+                    </div>
+                    <div class="agent-step" id="step2">
+                        <div class="step-icon">2</div>
+                        <div class="step-text">Financial Agent: Building financial model...</div>
+                        <div class="step-time"></div>
+                    </div>
+                    <div class="agent-step" id="step3">
+                        <div class="step-icon">3</div>
+                        <div class="step-text">Comps Agent: Finding comparable transactions...</div>
+                        <div class="step-time"></div>
+                    </div>
+                    <div class="agent-step" id="step4">
+                        <div class="step-icon">4</div>
+                        <div class="step-text">Risk Agent: Identifying deal risks...</div>
+                        <div class="step-time"></div>
+                    </div>
+                    <div class="agent-step" id="step5">
+                        <div class="step-icon">5</div>
+                        <div class="step-text">Writer Agent: Drafting pitchbook sections...</div>
+                        <div class="step-time"></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">📋 AI Analysis Summary</span>
+                    </div>
+                    <div id="analysisOutput">
+                        <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">Click "Analyze" to generate deal intelligence...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-2" style="margin-top: 1.5rem;">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">📈 Key Financials</span>
+                    </div>
+                    <div id="financialsOutput">
+                        <table class="financial-table">
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>FY2023</th>
+                                    <th>FY2024E</th>
+                                    <th>YoY</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Revenue (€B)</td>
+                                    <td>86.2</td>
+                                    <td>91.8</td>
+                                    <td class="positive">+6.5%</td>
+                                </tr>
+                                <tr>
+                                    <td>EBITDA (€B)</td>
+                                    <td>22.8</td>
+                                    <td>24.5</td>
+                                    <td class="positive">+7.5%</td>
+                                </tr>
+                                <tr>
+                                    <td>Net Income (€B)</td>
+                                    <td>15.2</td>
+                                    <td>16.1</td>
+                                    <td class="positive">+5.9%</td>
+                                </tr>
+                                <tr>
+                                    <td>EPS (€)</td>
+                                    <td>30.34</td>
+                                    <td>32.15</td>
+                                    <td class="positive">+6.0%</td>
+                                </tr>
+                                <tr>
+                                    <td>EBITDA Margin</td>
+                                    <td>26.5%</td>
+                                    <td>26.7%</td>
+                                    <td class="positive">+20bps</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">⚠️ Risk Factors</span>
+                    </div>
+                    <div id="risksOutput">
+                        <div class="risk-flag">
+                            <div class="risk-icon">💹</div>
+                            <div class="risk-text">
+                                <strong>China Exposure:</strong> 30% of revenue from Asia-Pacific region, sensitive to Chinese consumer sentiment and regulatory changes.
+                            </div>
+                        </div>
+                        <div class="risk-flag">
+                            <div class="risk-icon">💱</div>
+                            <div class="risk-text">
+                                <strong>FX Risk:</strong> Significant USD/EUR exposure. 1% EUR appreciation = ~€200M EBITDA impact.
+                            </div>
+                        </div>
+                        <div class="risk-flag info">
+                            <div class="risk-icon">🏭</div>
+                            <div class="risk-text">
+                                <strong>Supply Chain:</strong> Vertical integration provides resilience, but Italian manufacturing concentration poses localized risk.
+                            </div>
+                        </div>
+                        <div class="risk-flag info">
+                            <div class="risk-icon">👔</div>
+                            <div class="risk-text">
+                                <strong>Key Person:</strong> Bernard Arnault (age 75) succession planning is critical for investor confidence.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comps Tab -->
+        <div id="comps" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">📊 Trading Comparables</span>
+                    <span style="font-size: 0.8rem; color: var(--text-secondary);">European Luxury Goods Sector</span>
+                </div>
+                <table class="comps-table">
+                    <thead>
+                        <tr>
+                            <th>Company</th>
+                            <th>Market Cap (€B)</th>
+                            <th>EV/Revenue</th>
+                            <th>EV/EBITDA</th>
+                            <th>P/E 2024E</th>
+                            <th>Revenue Growth</th>
+                            <th>EBITDA Margin</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="highlight">
+                            <td>LVMH</td>
+                            <td>298.4</td>
+                            <td>3.5x</td>
+                            <td>13.2x</td>
+                            <td>19.8x</td>
+                            <td>+6.5%</td>
+                            <td>26.5%</td>
+                        </tr>
+                        <tr>
+                            <td>Hermès</td>
+                            <td>198.2</td>
+                            <td>13.8x</td>
+                            <td>28.5x</td>
+                            <td>45.2x</td>
+                            <td>+15.2%</td>
+                            <td>42.1%</td>
+                        </tr>
+                        <tr>
+                            <td>Kering</td>
+                            <td>42.8</td>
+                            <td>2.2x</td>
+                            <td>8.9x</td>
+                            <td>15.4x</td>
+                            <td>-2.1%</td>
+                            <td>24.8%</td>
+                        </tr>
+                        <tr>
+                            <td>Richemont</td>
+                            <td>68.5</td>
+                            <td>3.1x</td>
+                            <td>11.2x</td>
+                            <td>18.7x</td>
+                            <td>+8.3%</td>
+                            <td>27.6%</td>
+                        </tr>
+                        <tr>
+                            <td>Burberry</td>
+                            <td>8.2</td>
+                            <td>1.8x</td>
+                            <td>9.5x</td>
+                            <td>22.1x</td>
+                            <td>-4.5%</td>
+                            <td>18.9%</td>
+                        </tr>
+                        <tr>
+                            <td>Moncler</td>
+                            <td>14.6</td>
+                            <td>5.2x</td>
+                            <td>14.8x</td>
+                            <td>23.5x</td>
+                            <td>+11.2%</td>
+                            <td>35.1%</td>
+                        </tr>
+                        <tr style="background: var(--bg-secondary); font-weight: 600;">
+                            <td>Median</td>
+                            <td>—</td>
+                            <td>3.3x</td>
+                            <td>12.2x</td>
+                            <td>20.9x</td>
+                            <td>+7.4%</td>
+                            <td>26.2%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="grid-2" style="margin-top: 1.5rem;">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">🤝 Precedent Transactions</span>
+                    </div>
+                    <table class="comps-table">
+                        <thead>
+                            <tr>
+                                <th>Transaction</th>
+                                <th>Date</th>
+                                <th>EV (€B)</th>
+                                <th>EV/EBITDA</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Capri → Tapestry</td>
+                                <td>Aug 2023</td>
+                                <td>8.5</td>
+                                <td>9.8x</td>
+                            </tr>
+                            <tr>
+                                <td>Tiffany → LVMH</td>
+                                <td>Jan 2021</td>
+                                <td>15.8</td>
+                                <td>17.2x</td>
+                            </tr>
+                            <tr>
+                                <td>Versace → Capri</td>
+                                <td>Dec 2018</td>
+                                <td>1.8</td>
+                                <td>20.5x</td>
+                            </tr>
+                            <tr>
+                                <td>Jimmy Choo → Capri</td>
+                                <td>Nov 2017</td>
+                                <td>1.1</td>
+                                <td>16.8x</td>
+                            </tr>
+                            <tr style="background: var(--bg-secondary); font-weight: 600;">
+                                <td>Median</td>
+                                <td>—</td>
+                                <td>—</td>
+                                <td>17.0x</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">💰 Implied Valuation</span>
+                    </div>
+                    <div class="analysis-section">
+                        <div class="analysis-title">📐 Valuation Summary</div>
+                        <table class="financial-table" style="font-size: 0.85rem;">
+                            <tr>
+                                <td>Trading Comps (EV/EBITDA)</td>
+                                <td style="text-align: right;">€268B - €312B</td>
+                            </tr>
+                            <tr>
+                                <td>Precedent Transactions</td>
+                                <td style="text-align: right;">€355B - €420B</td>
+                            </tr>
+                            <tr>
+                                <td>DCF (WACC 8.5%)</td>
+                                <td style="text-align: right;">€285B - €345B</td>
+                            </tr>
+                            <tr style="background: rgba(59, 130, 246, 0.1);">
+                                <td><strong>Blended Valuation</strong></td>
+                                <td style="text-align: right;"><strong>€295B - €360B</strong></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div style="padding: 1rem; background: rgba(59, 130, 246, 0.1); border-radius: 8px; margin-top: 1rem;">
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">Current Market Cap: <strong style="color: var(--accent-1);">€298.4B</strong></div>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;">Implied Premium for Control: <strong style="color: var(--success);">+20-40%</strong></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pitchbook Tab -->
+        <div id="pitchbook" class="tab-content">
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">📑 Generated Slides</span>
+                        <button class="btn" onclick="generatePitchbook()">Generate Pitchbook</button>
+                    </div>
+                    <div id="slideList">
+                        <div class="source-card" onclick="showSlide('overview')">
+                            <div class="source-icon">1️⃣</div>
+                            <div class="source-info">
+                                <div class="source-title">Executive Summary</div>
+                                <div class="source-meta">Company overview & investment highlights</div>
+                            </div>
+                        </div>
+                        <div class="source-card" onclick="showSlide('financials')">
+                            <div class="source-icon">2️⃣</div>
+                            <div class="source-info">
+                                <div class="source-title">Financial Performance</div>
+                                <div class="source-meta">Historical financials & projections</div>
+                            </div>
+                        </div>
+                        <div class="source-card" onclick="showSlide('valuation')">
+                            <div class="source-icon">3️⃣</div>
+                            <div class="source-info">
+                                <div class="source-title">Valuation Analysis</div>
+                                <div class="source-meta">Trading comps & precedent transactions</div>
+                            </div>
+                        </div>
+                        <div class="source-card" onclick="showSlide('risks')">
+                            <div class="source-icon">4️⃣</div>
+                            <div class="source-info">
+                                <div class="source-title">Risk Factors</div>
+                                <div class="source-meta">Key risks & mitigants</div>
+                            </div>
+                        </div>
+                        <div class="source-card" onclick="showSlide('recommendation')">
+                            <div class="source-icon">5️⃣</div>
+                            <div class="source-info">
+                                <div class="source-title">Recommendation</div>
+                                <div class="source-meta">Investment thesis & next steps</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">👁️ Slide Preview</span>
+                    </div>
+                    <div class="pitchbook-preview" id="slidePreview">
+                        <div class="slide-header">
+                            <div class="slide-title">LVMH - Executive Summary</div>
+                            <div class="slide-subtitle">Confidential | January 2025</div>
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong style="color: #1a1a2e;">Company Overview</strong>
+                            <p style="font-size: 0.85rem; color: #444; margin-top: 0.5rem;">
+                                LVMH Moët Hennessy Louis Vuitton SE is the world's largest luxury goods conglomerate, 
+                                comprising 75 prestigious houses across Fashion & Leather Goods, Wines & Spirits, 
+                                Perfumes & Cosmetics, Watches & Jewelry, and Selective Retailing.
+                            </p>
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong style="color: #1a1a2e;">Investment Highlights</strong>
+                            <ul style="font-size: 0.85rem; color: #444; margin-top: 0.5rem; padding-left: 1.5rem;">
+                                <li>Unparalleled brand portfolio with pricing power</li>
+                                <li>Consistent double-digit EBITDA growth (10Y CAGR: 12.3%)</li>
+                                <li>Vertical integration drives 26%+ EBITDA margins</li>
+                                <li>Strong FCF generation (~€15B annually)</li>
+                            </ul>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #ddd;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 1.5rem; font-weight: 700; color: #3b82f6;">€298.4B</div>
+                                <div style="font-size: 0.75rem; color: #666;">Market Cap</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 1.5rem; font-weight: 700; color: #3b82f6;">€86.2B</div>
+                                <div style="font-size: 0.75rem; color: #666;">FY2024 Revenue</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 1.5rem; font-weight: 700; color: #3b82f6;">26.5%</div>
+                                <div style="font-size: 0.75rem; color: #666;">EBITDA Margin</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sources Tab -->
+        <div id="sources" class="tab-content">
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">📚 RAG Knowledge Base</span>
+                        <span style="font-size: 0.8rem; color: var(--text-secondary);">12,847 documents indexed</span>
+                    </div>
+                    <div class="source-card">
+                        <div class="source-icon">📄</div>
+                        <div class="source-info">
+                            <div class="source-title">SEC Filings (10-K, 10-Q, 8-K)</div>
+                            <div class="source-meta">4,521 documents | Updated daily</div>
+                        </div>
+                    </div>
+                    <div class="source-card">
+                        <div class="source-icon">🎤</div>
+                        <div class="source-info">
+                            <div class="source-title">Earnings Call Transcripts</div>
+                            <div class="source-meta">3,892 transcripts | 2020-2025</div>
+                        </div>
+                    </div>
+                    <div class="source-card">
+                        <div class="source-icon">📊</div>
+                        <div class="source-info">
+                            <div class="source-title">Analyst Reports</div>
+                            <div class="source-meta">2,156 reports | Top 20 brokers</div>
+                        </div>
+                    </div>
+                    <div class="source-card">
+                        <div class="source-icon">📰</div>
+                        <div class="source-info">
+                            <div class="source-title">Financial News</div>
+                            <div class="source-meta">1,834 articles | Reuters, Bloomberg</div>
+                        </div>
+                    </div>
+                    <div class="source-card">
+                        <div class="source-icon">🤝</div>
+                        <div class="source-info">
+                            <div class="source-title">M&A Transaction Database</div>
+                            <div class="source-meta">444 precedent transactions</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">🔍 Retrieved Sources for LVMH</span>
+                    </div>
+                    <div class="analysis-section">
+                        <div class="analysis-title">Most Relevant Documents</div>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                            <div style="padding: 0.5rem 0; border-bottom: 1px solid var(--border-color);">
+                                <strong>1.</strong> LVMH Annual Report 2024 <span class="citation">[0.94]</span>
+                            </div>
+                            <div style="padding: 0.5rem 0; border-bottom: 1px solid var(--border-color);">
+                                <strong>2.</strong> Q3 2024 Earnings Call Transcript <span class="citation">[0.91]</span>
+                            </div>
+                            <div style="padding: 0.5rem 0; border-bottom: 1px solid var(--border-color);">
+                                <strong>3.</strong> Morgan Stanley - Luxury Sector Outlook <span class="citation">[0.88]</span>
+                            </div>
+                            <div style="padding: 0.5rem 0; border-bottom: 1px solid var(--border-color);">
+                                <strong>4.</strong> Tiffany Acquisition Analysis (2021) <span class="citation">[0.85]</span>
+                            </div>
+                            <div style="padding: 0.5rem 0;">
+                                <strong>5.</strong> Goldman Sachs - LVMH Initiation <span class="citation">[0.82]</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="padding: 1rem; background: rgba(59, 130, 246, 0.1); border-radius: 8px; margin-top: 1rem;">
+                        <div style="font-size: 0.85rem;">
+                            <strong>Vector Database:</strong> Qdrant<br>
+                            <strong>Embedding Model:</strong> text-embedding-3-large<br>
+                            <strong>Chunk Size:</strong> 512 tokens<br>
+                            <strong>Top-K Retrieved:</strong> 10
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Architecture Tab -->
+        <div id="architecture" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">🏗️ Agentic RAG Architecture</span>
+                </div>
+                <div class="architecture-diagram">
+                    <div class="arch-flow">
+                        <div class="arch-box">
+                            <div style="font-size: 1.5rem;">🔍</div>
+                            <div style="font-weight: 600;">Query</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">"Analyze LVMH"</div>
+                        </div>
+                        <div class="arch-arrow">→</div>
+                        <div class="arch-box highlight">
+                            <div style="font-size: 1.5rem;">🎭</div>
+                            <div style="font-weight: 600;">Orchestrator</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">LangGraph</div>
+                        </div>
+                        <div class="arch-arrow">→</div>
+                        <div class="arch-box">
+                            <div style="font-size: 1.5rem;">🔬</div>
+                            <div style="font-weight: 600;">Research Agent</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">RAG + Web</div>
+                        </div>
+                    </div>
+                    <div style="margin: 1.5rem 0;">
+                        <div class="arch-arrow">↓</div>
+                    </div>
+                    <div class="arch-flow">
+                        <div class="arch-box">
+                            <div style="font-size: 1.5rem;">📑</div>
+                            <div style="font-weight: 600;">Pitchbook</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">PPTX/PDF</div>
+                        </div>
+                        <div class="arch-arrow">←</div>
+                        <div class="arch-box highlight">
+                            <div style="font-size: 1.5rem;">✍️</div>
+                            <div style="font-weight: 600;">Writer Agent</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Mistral Large</div>
+                        </div>
+                        <div class="arch-arrow">←</div>
+                        <div class="arch-box">
+                            <div style="font-size: 1.5rem;">📊</div>
+                            <div style="font-weight: 600;">Financial Agent</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Comps + DCF</div>
+                        </div>
+                        <div class="arch-arrow">←</div>
+                        <div class="arch-box">
+                            <div style="font-size: 1.5rem;">⚠️</div>
+                            <div style="font-weight: 600;">Risk Agent</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Sentiment + NER</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-3" style="margin-top: 2rem;">
+                    <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 8px;">
+                        <h4 style="color: var(--accent-1); margin-bottom: 0.5rem;">Vector Database</h4>
+                        <ul style="font-size: 0.85rem; color: var(--text-secondary); list-style: none;">
+                            <li>• Qdrant Cloud</li>
+                            <li>• 12.8K documents</li>
+                            <li>• 3072-dim embeddings</li>
+                            <li>• Hybrid search (dense+sparse)</li>
+                        </ul>
+                    </div>
+                    <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 8px;">
+                        <h4 style="color: var(--accent-1); margin-bottom: 0.5rem;">LLM Stack</h4>
+                        <ul style="font-size: 0.85rem; color: var(--text-secondary); list-style: none;">
+                            <li>• Mistral Large (primary)</li>
+                            <li>• GPT-4o (fallback)</li>
+                            <li>• Claude 3.5 (long context)</li>
+                            <li>• Function calling enabled</li>
+                        </ul>
+                    </div>
+                    <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 8px;">
+                        <h4 style="color: var(--accent-1); margin-bottom: 0.5rem;">Output Formats</h4>
+                        <ul style="font-size: 0.85rem; color: var(--text-secondary); list-style: none;">
+                            <li>• PowerPoint slides</li>
+                            <li>• Excel models</li>
+                            <li>• PDF reports</li>
+                            <li>• Structured JSON</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            Built by Sameer M · DealFlow AI for MARGO Capital Markets · 2025
+        </footer>
+    </div>
+
+    <script>
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        function analyzeCompany() {
+            const steps = ['step1', 'step2', 'step3', 'step4', 'step5'];
+            const times = ['2.3s', '3.1s', '1.8s', '2.5s', '4.2s'];
+            
+            // Reset steps
+            steps.forEach(s => {
+                const el = document.getElementById(s);
+                el.classList.remove('active', 'complete');
+                el.querySelector('.step-icon').textContent = steps.indexOf(s) + 1;
+                el.querySelector('.step-icon').classList.remove('complete');
+                el.querySelector('.step-time').textContent = '';
+            });
+            
+            document.getElementById('analysisOutput').innerHTML = `
+                <div class="processing-animation">
+                    <div class="spinner"></div>
+                    <span>Analyzing LVMH with multi-agent system...</span>
+                </div>
+            `;
+
+            steps.forEach((stepId, index) => {
+                setTimeout(() => {
+                    const step = document.getElementById(stepId);
+                    step.classList.add('active');
+                    
+                    setTimeout(() => {
+                        step.classList.remove('active');
+                        step.classList.add('complete');
+                        step.querySelector('.step-icon').innerHTML = '✓';
+                        step.querySelector('.step-icon').classList.add('complete');
+                        step.querySelector('.step-time').textContent = times[index];
+                    }, 1500);
+                }, index * 2000);
+            });
+
+            // Show analysis after all steps
+            setTimeout(() => {
+                document.getElementById('analysisOutput').innerHTML = `
+                    <div class="analysis-section">
+                        <div class="analysis-title">📝 Investment Summary</div>
+                        <div class="analysis-content">
+                            LVMH remains the dominant player in global luxury with unparalleled brand portfolio 
+                            and pricing power. Despite near-term China headwinds, structural growth drivers 
+                            remain intact with expanding HNW population and premiumization trends.<span class="citation" title="LVMH Annual Report 2024">[1]</span>
+                        </div>
+                    </div>
+                    <div class="analysis-section">
+                        <div class="analysis-title">💡 Key Insights</div>
+                        <div class="analysis-content">
+                            <ul style="margin-left: 1rem;">
+                                <li>Louis Vuitton alone contributes ~50% of group profit<span class="citation">[2]</span></li>
+                                <li>Organic growth of 9% expected in FY2025E<span class="citation">[3]</span></li>
+                                <li>Tiffany integration complete, synergies exceeding €300M<span class="citation">[1]</span></li>
+                                <li>Share buyback program of €1B announced<span class="citation">[4]</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="analysis-section">
+                        <div class="analysis-title">🎯 M&A Angle</div>
+                        <div class="analysis-content">
+                            Potential bolt-on targets in jewelry (Cartier carve-out unlikely) or 
+                            emerging luxury brands in experiential luxury segment. 
+                            Balance sheet capacity of €20B+ for acquisitions.<span class="citation">[5]</span>
+                        </div>
+                    </div>
+                `;
+            }, 11000);
+        }
+
+        const slides = {
+            overview: `
+                <div class="slide-header">
+                    <div class="slide-title">LVMH - Executive Summary</div>
+                    <div class="slide-subtitle">Confidential | January 2025</div>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <strong style="color: #1a1a2e;">Company Overview</strong>
+                    <p style="font-size: 0.85rem; color: #444; margin-top: 0.5rem;">
+                        LVMH Moët Hennessy Louis Vuitton SE is the world's largest luxury goods conglomerate, 
+                        comprising 75 prestigious houses across Fashion & Leather Goods, Wines & Spirits, 
+                        Perfumes & Cosmetics, Watches & Jewelry, and Selective Retailing.
+                    </p>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <strong style="color: #1a1a2e;">Investment Highlights</strong>
+                    <ul style="font-size: 0.85rem; color: #444; margin-top: 0.5rem; padding-left: 1.5rem;">
+                        <li>Unparalleled brand portfolio with pricing power</li>
+                        <li>Consistent double-digit EBITDA growth (10Y CAGR: 12.3%)</li>
+                        <li>Vertical integration drives 26%+ EBITDA margins</li>
+                        <li>Strong FCF generation (~€15B annually)</li>
+                    </ul>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #ddd;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 700; color: #3b82f6;">€298.4B</div>
+                        <div style="font-size: 0.75rem; color: #666;">Market Cap</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 700; color: #3b82f6;">€86.2B</div>
+                        <div style="font-size: 0.75rem; color: #666;">FY2024 Revenue</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 700; color: #3b82f6;">26.5%</div>
+                        <div style="font-size: 0.75rem; color: #666;">EBITDA Margin</div>
+                    </div>
+                </div>
+            `,
+            financials: `
+                <div class="slide-header">
+                    <div class="slide-title">Financial Performance</div>
+                    <div class="slide-subtitle">Historical Results & Projections</div>
+                </div>
+                <table style="width: 100%; font-size: 0.8rem; border-collapse: collapse;">
+                    <tr style="background: #f0f4f8;">
+                        <th style="padding: 0.5rem; text-align: left; color: #1a1a2e;">€ Billions</th>
+                        <th style="padding: 0.5rem; text-align: right; color: #1a1a2e;">FY2022</th>
+                        <th style="padding: 0.5rem; text-align: right; color: #1a1a2e;">FY2023</th>
+                        <th style="padding: 0.5rem; text-align: right; color: #1a1a2e;">FY2024E</th>
+                        <th style="padding: 0.5rem; text-align: right; color: #1a1a2e;">FY2025E</th>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.5rem; border-bottom: 1px solid #ddd;">Revenue</td>
+                        <td style="padding: 0.5rem; border-bottom: 1px solid #ddd; text-align: right;">79.2</td>
+                        <td style="padding: 0.5rem; border-bottom: 1px solid #ddd; text-align: right;">86.2</td>
+                        <td style="padding: 0.5rem; border-bottom: 1px solid #ddd; text-align: right;">91.8</td>
+                        <td style="padding: 0.5rem; border-bottom: 1px solid #ddd; text-align: right;">100.1</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.5rem; border-bottom: 1px solid #ddd;">EBITDA</td>
+                        <td style="padding: 0.5rem; border-bottom: 1px solid #ddd; text-align: right;">21.1</td>
+                        <td style="padding: 0.5rem; border-bottom: 1px solid #ddd; text-align: right;">22.8</td>
+                        <td style="padding: 0.5rem; border-bottom: 1px solid #ddd; text-align: right;">24.5</td>
+                        <td style="padding: 0.5rem; border-bottom: 1px solid #ddd; text-align: right;">27.2</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.5rem; border-bottom: 1px solid #ddd;">Net Income</td>
+                        <td style="padding: 0.5rem; border-bottom: 1px solid #ddd; text-align: right;">14.1</td>
+                        <td style="padding: 0.5rem; border-bottom: 1px solid #ddd; text-align: right;">15.2</td>
+                        <td style="padding: 0.5rem; border-bottom: 1px solid #ddd; text-align: right;">16.1</td>
+                        <td style="padding: 0.5rem; border-bottom: 1px solid #ddd; text-align: right;">17.8</td>
+                    </tr>
+                    <tr style="background: #e8f4fd;">
+                        <td style="padding: 0.5rem; font-weight: 600;">EBITDA Margin</td>
+                        <td style="padding: 0.5rem; text-align: right; font-weight: 600;">26.6%</td>
+                        <td style="padding: 0.5rem; text-align: right; font-weight: 600;">26.5%</td>
+                        <td style="padding: 0.5rem; text-align: right; font-weight: 600;">26.7%</td>
+                        <td style="padding: 0.5rem; text-align: right; font-weight: 600;">27.2%</td>
+                    </tr>
+                </table>
+                <div style="margin-top: 1rem; font-size: 0.75rem; color: #666;">
+                    Source: Company filings, BNP Paribas Exane estimates
+                </div>
+            `,
+            valuation: `
+                <div class="slide-header">
+                    <div class="slide-title">Valuation Analysis</div>
+                    <div class="slide-subtitle">Sum-of-the-Parts & Comparable Analysis</div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <strong style="color: #1a1a2e; font-size: 0.9rem;">Trading Multiples</strong>
+                        <table style="width: 100%; font-size: 0.75rem; margin-top: 0.5rem;">
+                            <tr><td style="padding: 0.25rem;">EV/Revenue</td><td style="text-align: right;">3.5x</td></tr>
+                            <tr><td style="padding: 0.25rem;">EV/EBITDA</td><td style="text-align: right;">13.2x</td></tr>
+                            <tr><td style="padding: 0.25rem;">P/E 2024E</td><td style="text-align: right;">19.8x</td></tr>
+                        </table>
+                    </div>
+                    <div>
+                        <strong style="color: #1a1a2e; font-size: 0.9rem;">Implied Valuation</strong>
+                        <table style="width: 100%; font-size: 0.75rem; margin-top: 0.5rem;">
+                            <tr><td style="padding: 0.25rem;">Trading Comps</td><td style="text-align: right;">€268-312B</td></tr>
+                            <tr><td style="padding: 0.25rem;">Precedent TXN</td><td style="text-align: right;">€355-420B</td></tr>
+                            <tr><td style="padding: 0.25rem;">DCF</td><td style="text-align: right;">€285-345B</td></tr>
+                        </table>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem; padding: 0.75rem; background: #e8f4fd; border-radius: 4px;">
+                    <strong style="color: #3b82f6;">Blended Valuation Range: €295B - €360B</strong>
+                </div>
+            `,
+            risks: `
+                <div class="slide-header">
+                    <div class="slide-title">Key Risk Factors</div>
+                    <div class="slide-subtitle">Investment Considerations</div>
+                </div>
+                <div style="font-size: 0.85rem; color: #444;">
+                    <div style="padding: 0.75rem; background: #fef3c7; border-left: 3px solid #f59e0b; margin-bottom: 0.75rem;">
+                        <strong>China Exposure (HIGH)</strong><br>
+                        30% revenue from APAC; consumer sentiment volatility
+                    </div>
+                    <div style="padding: 0.75rem; background: #fef3c7; border-left: 3px solid #f59e0b; margin-bottom: 0.75rem;">
+                        <strong>Currency Risk (MEDIUM)</strong><br>
+                        Significant USD/EUR exposure; natural hedging partial
+                    </div>
+                    <div style="padding: 0.75rem; background: #dbeafe; border-left: 3px solid #3b82f6; margin-bottom: 0.75rem;">
+                        <strong>Key Person Risk (MODERATE)</strong><br>
+                        Bernard Arnault succession planning
+                    </div>
+                    <div style="padding: 0.75rem; background: #d1fae5; border-left: 3px solid #10b981;">
+                        <strong>Supply Chain (LOW)</strong><br>
+                        Vertical integration provides resilience
+                    </div>
+                </div>
+            `,
+            recommendation: `
+                <div class="slide-header">
+                    <div class="slide-title">Investment Recommendation</div>
+                    <div class="slide-subtitle">Summary & Next Steps</div>
+                </div>
+                <div style="padding: 1rem; background: #d1fae5; border-radius: 8px; margin-bottom: 1rem;">
+                    <div style="font-size: 1.25rem; font-weight: 700; color: #059669;">✓ BUY RECOMMENDATION</div>
+                    <div style="font-size: 0.85rem; color: #065f46; margin-top: 0.5rem;">Target Price: €850 (+15% upside)</div>
+                </div>
+                <div style="font-size: 0.85rem; color: #444;">
+                    <strong>Investment Thesis:</strong>
+                    <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                        <li>Best-in-class luxury portfolio with pricing power</li>
+                        <li>Structural growth from emerging market wealth creation</li>
+                        <li>Attractive valuation vs. historical and peers</li>
+                        <li>Strong balance sheet for M&A optionality</li>
+                    </ul>
+                </div>
+                <div style="margin-top: 1rem; padding: 0.75rem; background: #f0f4f8; border-radius: 4px;">
+                    <strong>Next Steps:</strong> Schedule management meeting, prepare detailed model
+                </div>
+            `
+        };
+
+        function showSlide(slideId) {
+            document.getElementById('slidePreview').innerHTML = slides[slideId];
+        }
+
+        function generatePitchbook() {
+            document.getElementById('slidePreview').innerHTML = `
+                <div style="text-align: center; padding: 2rem;">
+                    <div class="spinner" style="margin: 0 auto 1rem;"></div>
+                    <div style="color: #666;">Generating pitchbook slides...</div>
+                </div>
+            `;
+            
+            setTimeout(() => {
+                showSlide('overview');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
